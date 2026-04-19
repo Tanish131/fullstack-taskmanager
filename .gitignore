@@ -1,0 +1,11 @@
+node_modules/
+coverage/
+dist/
+logs/
+.env
+*.log
+junit.xml
+npm-audit-report.json
+trivy-report.json
+.DS_Store
+.scannerwork/
