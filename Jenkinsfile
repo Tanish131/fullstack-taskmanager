@@ -9,9 +9,17 @@ pipeline {
             }
         }
 
-        stage('2. Build (Install Dependencies)') {
+        stage('2. Build (Create Docker Artifact)') {
             steps {
-                sh 'cd backend && npm install'
+                sh '''
+                echo "Installing dependencies..."
+                cd backend && npm install
+
+                echo "Building Docker image (artifact)..."
+                docker build -t taskmanager-app .
+
+                docker images > docker-images.txt
+                '''
             }
         }
 
@@ -47,29 +55,21 @@ pipeline {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                     docker run --rm \
-                    -v $WORKSPACE:/usr/src \
+                    -v $WORKSPACE/backend:/usr/src \
+                    -w /usr/src \
                     sonarsource/sonar-scanner-cli \
                     sonar-scanner \
                     -Dsonar.projectKey=taskmanager \
-                    -Dsonar.sources=backend \
+                    -Dsonar.sources=src \
                     -Dsonar.host.url=http://host.docker.internal:9000 \
                     -Dsonar.token=$SONAR_TOKEN \
-                    -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
+                    -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                     '''
                 }
             }
         }
 
-        stage('6. Package (Docker Build)') {
-            steps {
-                sh '''
-                docker build -t taskmanager-app .
-                docker images > docker-images.txt
-                '''
-            }
-        }
-
-        stage('7. Container Security (Trivy)') {
+        stage('6. Container Security (Trivy)') {
             steps {
                 sh '''
                 docker run --rm \
@@ -79,7 +79,7 @@ pipeline {
             }
         }
 
-        stage('8. Deploy (Staging/Test)') {
+        stage('7. Deploy (Staging/Test)') {
             steps {
                 sh '''
                 docker stop taskmanager-prod || true
@@ -92,7 +92,7 @@ pipeline {
             }
         }
 
-        stage('9. Release (Production Deployment)') {
+        stage('8. Release (Production Deployment)') {
             steps {
                 sh '''
                 echo "Releasing to production..."
@@ -101,24 +101,29 @@ pipeline {
                 docker rm taskmanager-prod-release || true
 
                 docker tag taskmanager-app taskmanager-app:v1.0
-                docker run -d -p 6000:5001 --name taskmanager-prod-release taskmanager-app:v1.0
+
+                docker run -d -p 6000:5001 \
+                --name taskmanager-prod-release \
+                taskmanager-app:v1.0
 
                 echo "Production deployment successful"
                 '''
             }
         }
 
-        stage('10. Monitoring & Alerting') {
+        stage('9. Monitoring & Alerting') {
             steps {
                 sh '''
                 echo "Waiting for application to start..."
                 sleep 10
 
                 echo "Checking application metrics..."
-                curl -f http://localhost:5003/metrics | tee monitoring.txt || echo "Metrics not available" > monitoring.txt
+                curl -f http://localhost:5003/metrics \
+                | tee monitoring.txt || echo "Metrics not available" > monitoring.txt
 
                 echo "Checking Prometheus alerts..."
-                curl http://host.docker.internal:9090/api/v1/alerts | tee alerts.txt
+                curl http://host.docker.internal:9090/api/v1/alerts \
+                | tee alerts.txt
 
                 echo "Monitoring and alert verification completed"
                 '''
