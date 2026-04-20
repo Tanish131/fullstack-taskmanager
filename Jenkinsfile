@@ -48,6 +48,7 @@ pipeline {
                     sh '''
                     docker run --rm \
                     -v $WORKSPACE/backend:/usr/src \
+                    -w /usr/src \
                     sonarsource/sonar-scanner-cli \
                     sonar-scanner \
                     -Dsonar.projectKey=taskmanager \
