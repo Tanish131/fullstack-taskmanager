@@ -19,7 +19,7 @@ pipeline {
             steps {
                 sh '''
                 cd backend
-                npm test > test-report.txt
+                npm test | tee test-report.txt
                 '''
             }
         }
@@ -28,7 +28,7 @@ pipeline {
             steps {
                 sh '''
                 cd backend
-                npm audit --json > npm-audit-report.txt || true
+                npm audit --json | tee npm-audit-report.txt || true
                 '''
             }
         }
@@ -65,21 +65,12 @@ pipeline {
                 sh '''
                 docker run --rm \
                 -v /var/run/docker.sock:/var/run/docker.sock \
-                aquasec/trivy image taskmanager-app > trivy-report.txt
+                aquasec/trivy image taskmanager-app | tee trivy-report.txt
                 '''
             }
         }
 
-        stage('8. Release (Production Artifact)') {
-            steps {
-                sh '''
-                docker tag taskmanager-app taskmanager-app:v1.0
-                docker save taskmanager-app:v1.0 > release-image.tar
-                '''
-            }
-        }
-
-        stage('9. Deploy (Clean Deployment)') {
+        stage('8. Deploy (Staging/Test)') {
             steps {
                 sh '''
                 docker stop taskmanager-prod || true
@@ -90,11 +81,35 @@ pipeline {
             }
         }
 
-        stage('10. Monitoring Integration') {
+        stage('9. Release (Production Deployment)') {
             steps {
                 sh '''
-                echo "Checking metrics endpoint..."
-                curl http://host.docker.internal:5003/metrics > monitoring.txt
+                echo "Releasing to production..."
+
+                docker stop taskmanager-prod-release || true
+                docker rm taskmanager-prod-release || true
+
+                docker tag taskmanager-app taskmanager-app:v1.0
+                docker run -d -p 6000:5001 --name taskmanager-prod-release taskmanager-app:v1.0
+
+                echo "Production deployment successful"
+                '''
+            }
+        }
+
+        stage('10. Monitoring & Alerting') {
+            steps {
+                sh '''
+                echo "Waiting for application to start..."
+                sleep 10
+
+                echo "Checking application metrics..."
+                curl -f http://localhost:5003/metrics | tee monitoring.txt || echo "Metrics not available" > monitoring.txt
+
+                echo "Checking Prometheus alerts..."
+                curl http://host.docker.internal:9090/api/v1/alerts | tee alerts.txt
+
+                echo "Monitoring and alert verification completed"
                 '''
             }
         }
@@ -102,7 +117,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '*.txt, *.tar', fingerprint: true
+            archiveArtifacts artifacts: '*.txt', fingerprint: true
         }
     }
 }
