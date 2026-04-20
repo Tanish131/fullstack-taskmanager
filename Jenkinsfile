@@ -51,7 +51,7 @@ pipeline {
                     sonarsource/sonar-scanner-cli \
                     sonar-scanner \
                     -Dsonar.projectKey=taskmanager \
-                    -Dsonar.sources=backend \
+                    -Dsonar.sources=backend/src \
                     -Dsonar.host.url=http://host.docker.internal:9000 \
                     -Dsonar.token=$SONAR_TOKEN \
                     -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
