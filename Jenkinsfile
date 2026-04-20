@@ -47,11 +47,10 @@ pipeline {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                     docker run --rm \
-                    -v $WORKSPACE:/usr/src \
+                    -v $WORKSPACE/backend:/usr/src \
                     sonarsource/sonar-scanner-cli \
                     sonar-scanner \
                     -Dsonar.projectKey=taskmanager \
-                    -Dsonar.projectBaseDir=/usr/src/backend \
                     -Dsonar.sources=src \
                     -Dsonar.host.url=http://host.docker.internal:9000 \
                     -Dsonar.token=$SONAR_TOKEN \
