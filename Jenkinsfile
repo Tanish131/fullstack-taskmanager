@@ -14,12 +14,20 @@ pipeline {
                 sh 'cd backend && npm install'
             }
         }
-
-        stage('3. Test (Jest)') {
+        stage('3. Test (Jest + Supertest + Coverage)') {
             steps {
                 sh '''
                 cd backend
-                npm test | tee test-report.txt
+
+                echo "Running unit tests with coverage..."
+                npx jest --coverage \
+                    --coverageReporters=lcov \
+                    --coverageReporters=text \
+                    2>&1 | tee test-report.txt
+
+                echo "Running integration tests (Supertest)..."
+                npx jest --testPathPattern="integration|e2e|supertest" \
+                    2>&1 | tee integration-test-report.txt || true
                 '''
             }
         }
@@ -117,7 +125,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '*.txt', fingerprint: true
+            archiveArtifacts artifacts: '*.txt, backend/coverage/**', fingerprint: true
         }
     }
 }
