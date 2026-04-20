@@ -14,6 +14,7 @@ pipeline {
                 sh 'cd backend && npm install'
             }
         }
+
         stage('3. Test (Jest + Supertest + Coverage)') {
             steps {
                 sh '''
@@ -26,8 +27,8 @@ pipeline {
                     2>&1 | tee test-report.txt
 
                 echo "Running integration tests (Supertest)..."
-                npx jest --testPathPattern="integration|e2e|supertest" \
-                    2>&1 | tee integration-test-report.txt || true
+                npx jest --testPathPattern="test" --passWithNoTests \
+                    2>&1 | tee integration-test-report.txt
                 '''
             }
         }
@@ -83,7 +84,9 @@ pipeline {
                 sh '''
                 docker stop taskmanager-prod || true
                 docker rm taskmanager-prod || true
+
                 docker run -d -p 5003:5001 --name taskmanager-prod taskmanager-app
+
                 docker logs taskmanager-prod > container-logs.txt
                 '''
             }
