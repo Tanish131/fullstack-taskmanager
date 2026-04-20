@@ -12,10 +12,11 @@ pipeline {
         stage('2. Build (Create Docker Artifact)') {
             steps {
                 sh '''
-                echo "Installing dependencies..."
+                echo "Installing backend dependencies..."
                 cd backend && npm install
 
-                echo "Building Docker image (artifact)..."
+                echo "Building Docker image from root directory..."
+                cd ..
                 docker build -t taskmanager-app .
 
                 docker images > docker-images.txt
