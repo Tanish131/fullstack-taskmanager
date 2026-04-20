@@ -47,11 +47,12 @@ pipeline {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                     docker run --rm \
-                    -v $WORKSPACE/backend:/usr/src \
+                    -v $WORKSPACE:/usr/src \
                     sonarsource/sonar-scanner-cli \
                     sonar-scanner \
                     -Dsonar.projectKey=taskmanager \
-                    -Dsonar.sources=. \
+                    -Dsonar.projectBaseDir=/usr/src/backend \
+                    -Dsonar.sources=src \
                     -Dsonar.host.url=http://host.docker.internal:9000 \
                     -Dsonar.token=$SONAR_TOKEN \
                     -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
