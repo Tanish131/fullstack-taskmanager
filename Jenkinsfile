@@ -9,7 +9,7 @@ pipeline {
             }
         }
 
-        stage('2. Install Dependencies') {
+        stage('2. Build (Install Dependencies)') {
             steps {
                 sh 'cd backend && npm install'
             }
@@ -24,7 +24,7 @@ pipeline {
             }
         }
 
-        stage('4. Dependency Security (npm audit)') {
+        stage('4. Security (npm audit)') {
             steps {
                 sh '''
                 cd backend
@@ -65,32 +65,36 @@ pipeline {
                 sh '''
                 docker run --rm \
                 -v /var/run/docker.sock:/var/run/docker.sock \
-                -v $WORKSPACE:/workspace \
                 aquasec/trivy image taskmanager-app > trivy-report.txt
                 '''
             }
         }
 
-        stage('8. Release') {
+        stage('8. Release (Production Artifact)') {
             steps {
-                sh 'docker tag taskmanager-app taskmanager-app:v1.0'
+                sh '''
+                docker tag taskmanager-app taskmanager-app:v1.0
+                docker save taskmanager-app:v1.0 > release-image.tar
+                '''
             }
         }
 
-        stage('9. Deployment') {
+        stage('9. Deploy (Clean Deployment)') {
             steps {
                 sh '''
-                docker run -d -p 5003:5001 --name taskmanager-prod taskmanager-app || true
+                docker stop taskmanager-prod || true
+                docker rm taskmanager-prod || true
+                docker run -d -p 5003:5001 --name taskmanager-prod taskmanager-app
                 docker logs taskmanager-prod > container-logs.txt
                 '''
             }
         }
 
-        stage('10. System Info (Bonus)') {
+        stage('10. Monitoring Integration') {
             steps {
                 sh '''
-                uname -a > system-info.txt
-                df -h >> system-info.txt
+                echo "Checking metrics endpoint..."
+                curl http://host.docker.internal:5003/metrics > monitoring.txt
                 '''
             }
         }
@@ -98,7 +102,7 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: '*.txt', fingerprint: true
+            archiveArtifacts artifacts: '*.txt, *.tar', fingerprint: true
         }
     }
 }
