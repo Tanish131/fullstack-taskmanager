@@ -1,4 +1,4 @@
-pipeline {
+ pipeline {
     agent any
 
     stages {
@@ -47,15 +47,14 @@ pipeline {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                     docker run --rm \
-                    -v $WORKSPACE/backend:/usr/src \
-                    -w /usr/src \
+                    -v $WORKSPACE:/usr/src \
                     sonarsource/sonar-scanner-cli \
                     sonar-scanner \
                     -Dsonar.projectKey=taskmanager \
-                    -Dsonar.sources=src \
+                    -Dsonar.sources=backend \
                     -Dsonar.host.url=http://host.docker.internal:9000 \
                     -Dsonar.token=$SONAR_TOKEN \
-                    -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                    -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
                     '''
                 }
             }
@@ -102,10 +101,7 @@ pipeline {
                 docker rm taskmanager-prod-release || true
 
                 docker tag taskmanager-app taskmanager-app:v1.0
-
-                docker run -d -p 6000:5001 \
-                --name taskmanager-prod-release \
-                taskmanager-app:v1.0
+                docker run -d -p 6000:5001 --name taskmanager-prod-release taskmanager-app:v1.0
 
                 echo "Production deployment successful"
                 '''
@@ -119,12 +115,10 @@ pipeline {
                 sleep 10
 
                 echo "Checking application metrics..."
-                curl -f http://localhost:5003/metrics \
-                | tee monitoring.txt || echo "Metrics not available" > monitoring.txt
+                curl -f http://localhost:5003/metrics | tee monitoring.txt || echo "Metrics not available" > monitoring.txt
 
                 echo "Checking Prometheus alerts..."
-                curl http://host.docker.internal:9090/api/v1/alerts \
-                | tee alerts.txt
+                curl http://host.docker.internal:9090/api/v1/alerts | tee alerts.txt
 
                 echo "Monitoring and alert verification completed"
                 '''
