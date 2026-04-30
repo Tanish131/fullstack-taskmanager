@@ -56,14 +56,14 @@ pipeline {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                     docker run --rm \
-                    -v $WORKSPACE:/usr/src \
+                    -v $WORKSPACE/backend:/usr/src \
                     sonarsource/sonar-scanner-cli \
                     sonar-scanner \
                     -Dsonar.projectKey=taskmanager \
-                    -Dsonar.sources=backend \
+                    -Dsonar.sources=. \
                     -Dsonar.host.url=http://host.docker.internal:9000 \
                     -Dsonar.token=$SONAR_TOKEN \
-                    -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info
+                    -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                     '''
                 }
             }
@@ -102,7 +102,7 @@ pipeline {
 
                 docker tag taskmanager-app taskmanager-app:v1.0
 
-                docker run -d -p 6000:5001 \
+                docker run -d -p 7000:5001 \
                 --name taskmanager-prod-release \
                 taskmanager-app:v1.0
 
