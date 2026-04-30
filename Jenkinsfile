@@ -102,7 +102,8 @@ pipeline {
 
                 docker tag taskmanager-app taskmanager-app:v1.0
 
-                docker run -d -p 6000:5001 \
+         
+                docker run -d -p 7000:5001 \
                 --name taskmanager-prod-release \
                 taskmanager-app:v1.0
 
